@@ -285,7 +285,7 @@ export function Sidebar({
             )}
 
             {!collapsed && showGroupEditor && !settings.hideGroups && (
-                <div className="quiet-surface mx-3 mt-1.5 flex flex-col gap-2.5 p-2.5">
+                <div className="mt-2 flex flex-col gap-2.5 rounded-xl border border-app-border-subtle bg-app-surface/70 p-2.5">
                     <div>
                         <label className="mb-1 block text-badge font-medium text-app-text-secondary">
                             {editingGroup ? t('common.edit_group_name') : t('common.new_group_name')}
