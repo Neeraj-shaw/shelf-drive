@@ -71,10 +71,11 @@ export function FileListItem({
             style={{ opacity: isDragging ? 0.45 : undefined }}
             {...(!isFolder ? attributes : {})}
             {...(!isFolder ? listeners : {})}
-            className={`group grid h-10 cursor-pointer grid-cols-[1.75rem_minmax(0,1fr)_2rem] items-center gap-3 border-b border-app-border-subtle px-3 transition-colors hover:bg-app-hover sm:grid-cols-[1.75rem_minmax(0,2fr)_6rem_8rem_2rem]
+            className={`drive-list-row grid-cols-[1.75rem_minmax(0,1fr)_2rem] group cursor-pointer sm:grid-cols-[1.75rem_minmax(0,2fr)_6rem_8rem_2rem]
                 ${selectedIds.includes(file.id) ? 'bg-app-selected' : ''}
-                ${isFileDragOver ? 'bg-app-selected ring-2 ring-inset ring-app-accent' : ''}
+                ${isFileDragOver ? 'ring-2 ring-inset ring-app-accent' : ''}
             `}
+            data-selected={selectedIds.includes(file.id)}
         >
             <div className="flex justify-center">
                 {isFolder ? <Folder className="h-4 w-4 text-app-accent" /> : <FileTypeIcon filename={file.name} className="h-4 w-4" />}

@@ -4,7 +4,7 @@ import { Plus, ArrowUpDown, ArrowUp, ArrowDown, FolderUp } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../../../context/SettingsContext';
-import { FileCard } from './FileCard';
+import { FileCard, FILE_CARD_LABEL_HEIGHT } from './FileCard';
 import { EmptyState } from './EmptyState';
 import { TelegramFile, TelegramFolder } from '../../../types';
 import { ContextMenu } from './ContextMenu';
@@ -102,7 +102,8 @@ export function FileExplorer({
     const columns = Math.min(desiredColumns, safeColumns);
 
     const cardWidth = (containerWidth - (GRID_GAP * (columns - 1))) / columns;
-    const cardHeight = Math.max(MIN_CARD_HEIGHT, cardWidth * 0.75); // 4:3 until the protected minimum
+    // Artwork keeps a 4:3-ish frame; the label block underneath is fixed so rows stay even.
+    const cardHeight = Math.max(MIN_CARD_HEIGHT, cardWidth * 0.58) + FILE_CARD_LABEL_HEIGHT;
 
     const handleContextMenu = useCallback((e: React.MouseEvent, file: TelegramFile) => {
         e.preventDefault();
@@ -189,7 +190,7 @@ export function FileExplorer({
 
     if (loading || (!error && syncProgress?.active && files.length === 0)) {
         return (
-            <div className="custom-scrollbar flex-1 overflow-hidden p-3" aria-label={t('common.loading')}>
+            <div className="drive-content custom-scrollbar overflow-hidden" aria-label={t('common.loading')}>
                 {viewMode === 'grid' ? (
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3">
                         {Array.from({ length: 12 }, (_, index) => (
@@ -216,12 +217,12 @@ export function FileExplorer({
     }
 
     if (error) {
-        return <div className="flex flex-1 items-center justify-center p-3 text-ui text-app-danger">Error loading files</div>;
+        return <div className="drive-content flex items-center justify-center text-ui text-app-danger">Error loading files</div>;
     }
 
     if (files.length === 0) {
         return (
-            <div className="flex-1 overflow-auto p-3">
+            <div className="drive-content">
                 <EmptyState onUpload={onManualUpload} />
             </div>
         );
@@ -230,7 +231,7 @@ export function FileExplorer({
     return (
         <div
             ref={parentRef}
-            className="custom-scrollbar flex-1 overflow-auto p-3"
+            className="drive-content custom-scrollbar"
         >
             {syncProgress?.active && syncProgress.count > 0 && (
                 <div className="sticky top-0 z-10 mx-auto mb-3 flex w-fit items-center gap-2 rounded-full border border-app-accent/20 bg-app-surface-raised px-3 py-1.5 text-xs text-app-text-secondary shadow-lg" role="status" aria-live="polite">
@@ -263,10 +264,10 @@ export function FileExplorer({
                                                 <button
                                                     key="upload"
                                                     onClick={(e) => { e.stopPropagation(); onManualUpload(); }}
-                                                    className="quiet-control group flex min-w-0 flex-col items-center justify-center overflow-hidden border border-dashed border-app-border-subtle bg-app-surface/25 text-app-text-secondary hover:border-app-accent/45 hover:bg-app-surface/50 hover:text-app-accent"
+                                                    className="shelf-add"
                                                     style={{ height: `${cardHeight}px` }}
                                                 >
-                                                    <Plus className="mb-1.5 h-6 w-6" />
+                                                    <span className="shelf-add-icon"><Plus className="h-4 w-4" aria-hidden="true" /></span>
                                                     <span className="text-ui font-medium">{t('common.upload_file')}</span>
                                                 </button>
                                             );
@@ -276,10 +277,10 @@ export function FileExplorer({
                                                 <button
                                                     key="upload-folder"
                                                     onClick={(e) => { e.stopPropagation(); onFolderUpload(); }}
-                                                    className="quiet-control group flex min-w-0 flex-col items-center justify-center overflow-hidden border border-dashed border-app-border-subtle bg-app-surface/25 text-app-text-secondary hover:border-app-accent/45 hover:bg-app-surface/50 hover:text-app-accent"
+                                                    className="shelf-add"
                                                     style={{ height: `${cardHeight}px` }}
                                                 >
-                                                    <FolderUp className="mb-1.5 h-6 w-6" />
+                                                    <span className="shelf-add-icon"><FolderUp className="h-4 w-4" aria-hidden="true" /></span>
                                                     <span className="text-ui font-medium">{t('common.upload_folder')}</span>
                                                 </button>
                                             );
@@ -310,9 +311,9 @@ export function FileExplorer({
                     </div>
                 </>
             ) : (
-                <div className="flex w-full flex-col overflow-hidden border-y border-app-border-subtle">
+                <div className="flex w-full flex-col overflow-hidden">
                     {/* List Header */}
-                    <div className="grid h-8 grid-cols-[1.75rem_2fr_6rem_8rem] items-center gap-3 border-b border-app-border-subtle bg-app-surface-sunken/20 px-3 text-metadata font-medium text-app-text-secondary select-none">
+                    <div className="drive-list-head grid-cols-[1.75rem_2fr_6rem_8rem] select-none">
                         <div className="text-center">#</div>
                         <button onClick={() => onSortChange('name')} className="flex items-center gap-1 transition-colors hover:text-app-text">
                             {t('common.name')} <SortIcon field="name" />
@@ -340,10 +341,10 @@ export function FileExplorer({
                                     >
                                         <button
                                             onClick={(e) => { e.stopPropagation(); onManualUpload(); }}
-                                        className="flex h-10 w-full cursor-pointer items-center gap-3 border-b border-dashed border-app-border-subtle px-3 text-app-text-secondary hover:bg-app-hover hover:text-app-text"
+                                        className="drive-list-row grid-cols-[1.75rem_minmax(0,1fr)] w-full cursor-pointer border-dashed text-start text-app-text-secondary"
                                         >
                                             <div className="flex h-5 w-5 items-center justify-center"><Plus className="h-3.5 w-3.5" /></div>
-                                            <span className="text-ui font-medium">{t('common.upload_file')}...</span>
+                                            <span className="text-ui font-medium">{t('common.upload_file')}</span>
                                         </button>
                                     </div>
                                 );
@@ -357,10 +358,10 @@ export function FileExplorer({
                                     >
                                         <button
                                             onClick={(e) => { e.stopPropagation(); onFolderUpload(); }}
-                                        className="flex h-10 w-full cursor-pointer items-center gap-3 border-b border-dashed border-app-border-subtle px-3 text-app-text-secondary hover:bg-app-hover hover:text-app-text"
+                                        className="drive-list-row grid-cols-[1.75rem_minmax(0,1fr)] w-full cursor-pointer border-dashed text-start text-app-text-secondary"
                                         >
                                             <div className="flex h-5 w-5 items-center justify-center"><FolderUp className="h-3.5 w-3.5" /></div>
-                                            <span className="text-ui font-medium">{t('common.upload_folder')}...</span>
+                                            <span className="text-ui font-medium">{t('common.upload_folder')}</span>
                                         </button>
                                     </div>
                                 );

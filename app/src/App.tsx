@@ -22,6 +22,10 @@ const AccessibilityAudit = import.meta.env.DEV
 const AccessibilityFixtures = import.meta.env.DEV
   ? React.lazy(() => import("./components/dev/AccessibilityFixtures"))
   : null;
+// Desktop shell preview with sample content: UI review without a Telegram session.
+const ShellPreview = import.meta.env.DEV
+  ? React.lazy(() => import("./components/dev/ShellPreview"))
+  : null;
 // Mobile shell: ships in the production build for phones/tablets and is
 // also previewable in a browser via ?mobile without an Android device.
 const MobileDashboard = React.lazy(() => import("./components/mobile/MobileDashboard"));
@@ -262,6 +266,9 @@ function App() {
   const showAccessibilityFixture = Boolean(
     AccessibilityFixtures && typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('a11y-fixture')
   );
+  const showShellPreview = Boolean(
+    ShellPreview && typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('shell-preview')
+  );
 
   return (
     <AppProviders>
@@ -271,6 +278,10 @@ function App() {
       {showAccessibilityFixture && AccessibilityFixtures ? (
         <Suspense fallback={<div className="h-screen bg-app-canvas" />}>
           <AccessibilityFixtures />
+        </Suspense>
+      ) : showShellPreview && ShellPreview ? (
+        <Suspense fallback={<div className="h-screen bg-app-canvas" />}>
+          <ShellPreview />
         </Suspense>
       ) : showDesignGallery && DesignGallery ? (
         <Suspense fallback={<div className="h-screen bg-app-canvas" />}>

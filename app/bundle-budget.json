@@ -2,7 +2,7 @@
   "maxInitialJavaScriptBytes": 550000,
   "maxJavaScriptChunkBytes": 550000,
   "maxTotalJavaScriptBytes": 3300000,
-  "maxTotalCssBytes": 140000,
+  "maxTotalCssBytes": 160000,
   "maxTotalLocaleDataBytes": 1600000,
   "maxLocaleDataBytes": 120000,
   "routeJavaScriptBudgets": {
@@ -15,5 +15,5 @@
     "src/components/desktop/dashboard/ArchiveViewerModal.tsx": 25000,
     "node_modules/hls.js/dist/hls.mjs": 540000
   },
-  "policy": "No-regression ceilings based on the lazy-feature and lazy-locale production build. Increases require an explicit performance review. PdfViewer raised 500000 -> 510000 for the pdfjs-dist 6.3.289 security upgrade (GHSA-hq66-cqwq-w95j)."
+  "policy": "No-regression ceilings based on the lazy-feature and lazy-locale production build. Increases require an explicit performance review. PdfViewer raised 500000 -> 510000 for the pdfjs-dist 6.3.289 security upgrade (GHSA-hq66-cqwq-w95j). Total CSS raised 140000 -> 160000 for the desktop shell theme layer (tinted desk, floating window, sidebar rail, content tiles and list rows), which adds ~16 kB of hand-written CSS so the shell derives every surface from the existing app-* tokens and keeps user themes intact."
 }

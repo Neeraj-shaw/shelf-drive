@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { HardDrive, Folder, Plus, RefreshCw, LogOut, ChevronLeft, ChevronRight, Settings2, Trash2, Check, X, Eye, EyeOff, Clock3, Star, FileWarning, Copy, Database, Files, Image, Film, FileText } from 'lucide-react';
+import { HardDrive, Folder, Plus, RefreshCw, LogOut, ChevronLeft, ChevronRight, Settings2, Trash2, Check, X, Eye, EyeOff, Clock3, Star, FileWarning, Copy, Database, Files, Image, Film, FileText, UploadCloud, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SidebarItem } from './SidebarItem';
 import { BandwidthWidget } from './BandwidthWidget';
@@ -65,10 +65,10 @@ function GroupTab({ id, groupId, label, colorHex, active, onClick, onEdit, isSor
             {...attributes}
             {...listeners}
             onClick={onClick}
-            className={`quiet-control flex h-7 flex-shrink-0 cursor-pointer select-none items-center gap-1.5 border px-2 text-badge font-medium ${
+            className={`flex h-7 flex-shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-full border px-2.5 text-badge font-medium transition-colors ${
                 active
-                    ? 'border-app-accent/30 bg-app-selected text-app-accent'
-                    : 'border-app-border bg-app-surface text-app-text-secondary hover:border-app-border-strong hover:text-app-text'
+                    ? 'border-app-border-strong bg-app-surface-raised text-app-text'
+                    : 'border-app-border-subtle bg-transparent text-app-text-secondary hover:bg-app-hover hover:text-app-text'
             }`}
         >
             {colorHex && (
@@ -115,12 +115,14 @@ interface SidebarProps {
     createFolderRequest?: number;
     activeSmartView?: SmartView | null;
     onSmartViewChange?: (view: SmartView | null) => void;
+    onUpload?: () => void;
 }
 
 export function Sidebar({
     folders, groups = [], activeFolderId, setActiveFolderId, onDelete, onRename, onToggleVisibility, onExportInvite, onCreate,
     isSyncing, isConnected, onSync, onLogout, bandwidth,
-    onAssignFolderToGroup, onCreateGroup, onUpdateGroup, onDeleteGroup, createFolderRequest = 0, activeSmartView = null, onSmartViewChange
+    onAssignFolderToGroup, onCreateGroup, onUpdateGroup, onDeleteGroup, createFolderRequest = 0, activeSmartView = null, onSmartViewChange,
+    onUpload,
 }: SidebarProps) {
     const [showNewFolderInput, setShowNewFolderInput] = useState(false);
     const { t } = useTranslation();
@@ -167,276 +169,356 @@ export function Sidebar({
         return folder.group_id === activeGroupId;
     });
 
+    /** Focus the shared search field in the header so the sidebar shortcut
+     *  lands on the single source of truth for the query. */
+    const focusSearch = () => {
+        const input = document.querySelector<HTMLInputElement>('input[data-file-search]');
+        if (!input) return;
+        input.focus();
+        input.select();
+    };
+
+    const openSettings = () => window.dispatchEvent(new Event('shelf-drive-open-settings'));
+    const collapsed = settings.sidebarCollapsed;
+
     return (
-        <aside 
-            className="flex shrink-0 flex-col border-e border-app-border-subtle bg-app-sidebar transition-[width] duration-200"
-            style={{ width: settings.sidebarCollapsed ? quietMetrics.sidebarWidth.collapsed : quietMetrics.sidebarWidth.expanded }}
+        <aside
+            className="drive-sidebar shrink-0"
+            style={{ width: collapsed ? quietMetrics.sidebarWidth.collapsed : quietMetrics.sidebarWidth.expanded }}
             onClick={e => e.stopPropagation()}
         >
-            <div className={`desktop-chrome-row flex-nowrap ${settings.sidebarCollapsed ? 'sidebar-header-rail justify-center gap-1' : 'justify-between'}`}>
-                <div className="flex min-w-0 items-center gap-2">
-                    <img src="/logo.png" className={`shrink-0 ${settings.sidebarCollapsed ? 'h-[22px] w-[22px]' : 'h-6 w-6'}`} alt="Logo" />
-                    {!settings.sidebarCollapsed && (
-                        <span className="truncate text-app-title font-semibold tracking-[-0.01em] text-app-text">{t('common.app_title')}</span>
-                    )}
-                </div>
+            {/* Identity: brand tile, workspace name, collapse control */}
+            <div className={collapsed ? 'flex flex-col items-center gap-1 py-3' : 'drive-sidebar-head'}>
+                <span className="drive-logo-tile">
+                    <img
+                        src="/logo.png"
+                        alt=""
+                        aria-hidden="true"
+                        className={collapsed ? 'h-5 w-5' : 'h-6 w-6'}
+                    />
+                </span>
+                {!collapsed && (
+                    <span className="drive-sidebar-identity">
+                        <span className="drive-sidebar-name truncate">{t('common.app_title')}</span>
+                        <span className="drive-sidebar-sub truncate">{t('workspace.title')}</span>
+                    </span>
+                )}
                 <button
-                    onClick={() => updateSetting('sidebarCollapsed', !settings.sidebarCollapsed)}
-                    className={`quiet-control flex shrink-0 items-center justify-center text-app-text-tertiary hover:text-app-text ${settings.sidebarCollapsed ? 'h-6 w-6' : 'h-7 w-7'}`}
-                    title={settings.sidebarCollapsed ? t('common.expand_sidebar') || "Expand Sidebar" : t('common.collapse_sidebar') || "Collapse Sidebar"}
+                    type="button"
+                    onClick={() => updateSetting('sidebarCollapsed', !collapsed)}
+                    className={`drive-collapse ${collapsed ? '' : 'ms-auto'}`}
+                    aria-label={collapsed ? t('common.expand_sidebar') || 'Expand sidebar' : t('common.collapse_sidebar') || 'Collapse sidebar'}
+                    title={collapsed ? t('common.expand_sidebar') || 'Expand sidebar' : t('common.collapse_sidebar') || 'Collapse sidebar'}
                 >
-                    {settings.sidebarCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+                    {collapsed
+                        ? <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                        : <ChevronLeft className="h-4 w-4" aria-hidden="true" />}
                 </button>
             </div>
 
-                {settings.sidebarCollapsed ? <div className="desktop-chrome-row" aria-hidden="true" /> : (
-                    <div className="flex shrink-0 flex-col">
-                        <div className="desktop-chrome-row justify-between">
-                            <span className="text-ui font-medium text-app-text-tertiary">
-                                {t('common.groups') || "Groups"}
-                            </span>
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={() => updateSetting('hideGroups', !settings.hideGroups)}
-                                    className="quiet-control flex h-7 w-7 items-center justify-center text-app-text-tertiary hover:text-app-text"
-                                    title={settings.hideGroups ? t('common.show_groups') || "Show Groups" : t('common.hide_groups') || "Hide Groups"}
-                                >
-                                    {settings.hideGroups ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                </button>
-                                {!settings.hideGroups && (
-                                    <button
-                                        onClick={() => {
-                                            setEditingGroup(null);
-                                            setGroupName("");
-                                            setGroupColor("#3B82F6");
-                                            setShowGroupEditor(true);
-                                        }}
-                                        className="quiet-control flex h-7 w-7 items-center justify-center text-app-text-tertiary hover:text-app-text"
-                                        title={t('common.create_group') || "Create Group"}
-                                    >
-                                        <Plus className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+            {/* Primary action and quick tools */}
+            {!collapsed && (
+                <div className="drive-sidebar-actions">
+                    {onUpload && (
+                        <button type="button" onClick={onUpload} className="drive-upload">
+                            <UploadCloud className="h-4 w-4" aria-hidden="true" />
+                            {t('common.upload')}
+                        </button>
+                    )}
+                    <div className="flex items-center gap-1.5 px-0.5">
+                        <button
+                            type="button"
+                            onClick={focusSearch}
+                            className="drive-icon-circle"
+                            aria-label={t('common.search_placeholder')}
+                            title={t('common.search_placeholder')}
+                        >
+                            <Search className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={openSettings}
+                            className="drive-icon-circle"
+                            aria-label={t('common.settings')}
+                            title={t('common.settings')}
+                        >
+                            <Settings2 className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    </div>
+                </div>
+            )}
 
-                        {!settings.hideGroups && showGroupEditor && (
-                            <div className="quiet-surface mx-3 mb-2.5 flex flex-col gap-2.5 p-2.5 animate-in fade-in duration-150">
-                                <div>
-                                    <label className="mb-1 block text-badge font-medium text-app-text-secondary">
-                                        {editingGroup ? t('common.edit_group_name') : t('common.new_group_name')}
-                                    </label>
-                                    <input
-                                        autoFocus
-                                        type="text"
-                                        className="quiet-control h-8 w-full border border-app-border bg-app-surface-sunken/50 px-2 text-ui text-app-text outline-none"
-                                        placeholder={t('common.enter_group_name')}
-                                        value={groupName}
-                                        onChange={e => setGroupName(e.target.value)}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="mb-1 block text-badge font-medium text-app-text-secondary">
-                                        {t('common.theme_color')}
-                                    </label>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {PRESET_COLORS.map(color => (
-                                            <button
-                                                key={color}
-                                                onClick={() => setGroupColor(color)}
-                                                className={`w-5 h-5 rounded-full border transition-all ${
-                                                    groupColor === color
-                                                        ? 'border-white scale-110 shadow-md ring-1 ring-telegram-primary'
-                                                        : 'border-transparent hover:scale-105'
-                                                }`}
-                                                style={{ backgroundColor: color }}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-2 justify-end mt-1">
-                                    {editingGroup && (
-                                        <button
-                                            onClick={() => handleDeleteGroupClick(editingGroup.id)}
-                                            className="mr-auto p-1.5 text-red-500 hover:bg-red-500/10 rounded transition-colors"
-                                            title={t('common.delete_group')}
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => {
-                                            setShowGroupEditor(false);
-                                            setEditingGroup(null);
-                                        }}
-                                        className="quiet-control flex h-7 items-center gap-1 px-2 text-badge font-medium text-app-text-secondary hover:text-app-text"
-                                    >
-                                        <X className="w-3 h-3" />
-                                        {t('common.cancel') || "Cancel"}
-                                    </button>
-                                    <button
-                                        onClick={handleSaveGroup}
-                                        disabled={!groupName.trim()}
-                                        className="quiet-control flex h-7 items-center gap-1 bg-app-accent px-2.5 text-badge font-medium text-app-accent-contrast hover:bg-app-accent-hover disabled:opacity-50"
-                                    >
-                                        <Check className="w-3 h-3" />
-                                        {t('common.save') || "Save"}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
+            {/* Group filters */}
+            {!collapsed && (
+                <div className="flex shrink-0 items-center justify-between px-3.5 pt-1.5">
+                    <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.07em] text-app-text-tertiary">
+                        {t('common.groups') || 'Groups'}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                        <button
+                            type="button"
+                            onClick={() => updateSetting('hideGroups', !settings.hideGroups)}
+                            className="drive-mini-btn"
+                            aria-label={settings.hideGroups ? t('common.show_groups') || 'Show groups' : t('common.hide_groups') || 'Hide groups'}
+                            title={settings.hideGroups ? t('common.show_groups') || 'Show groups' : t('common.hide_groups') || 'Hide groups'}
+                        >
+                            {settings.hideGroups ? <EyeOff className="h-3.5 w-3.5" aria-hidden="true" /> : <Eye className="h-3.5 w-3.5" aria-hidden="true" />}
+                        </button>
                         {!settings.hideGroups && (
-                            <div 
-                                className="group-tabs-scroll flex items-center gap-2 overflow-x-auto px-3 pb-2.5 pt-2"
-                                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setEditingGroup(null);
+                                    setGroupName('');
+                                    setGroupColor('#3B82F6');
+                                    setShowGroupEditor(true);
+                                }}
+                                className="drive-mini-btn"
+                                aria-label={t('common.create_group') || 'Create group'}
+                                title={t('common.create_group') || 'Create group'}
                             >
-                                <style>{`
-                                    .group-tabs-scroll::-webkit-scrollbar {
-                                        display: none;
-                                    }
-                                `}</style>
-                                <GroupTab
-                                    id="group-tab-all"
-                                    groupId="all"
-                                    label={t('common.all') || "All"}
-                                    active={activeGroupId === 'all'}
-                                    onClick={() => setActiveGroupId('all')}
-                                    isSortable={false}
-                                />
-                                <GroupTab
-                                    id="group-tab-unassigned"
-                                    groupId={null}
-                                    label={t('common.unassigned') || "Unassigned"}
-                                    active={activeGroupId === null}
-                                    onClick={() => setActiveGroupId(null)}
-                                    isSortable={false}
-                                />
-                                <SortableContext
-                                    items={groups.map(g => `group-tab-${g.id}`)}
-                                    strategy={horizontalListSortingStrategy}
-                                >
-                                    {groups.map(group => (
-                                        <GroupTab
-                                            key={group.id}
-                                            id={`group-tab-${group.id}`}
-                                            groupId={group.id}
-                                            label={group.name}
-                                            colorHex={group.color_hex}
-                                            active={activeGroupId === group.id}
-                                            onClick={() => setActiveGroupId(group.id)}
-                                            onEdit={() => {
-                                                setEditingGroup(group);
-                                                setGroupName(group.name);
-                                                setGroupColor(group.color_hex || "#3B82F6");
-                                                setShowGroupEditor(true);
-                                            }}
-                                        />
-                                    ))}
-                                </SortableContext>
-                            </div>
+                                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
                         )}
                     </div>
-                )}
+                </div>
+            )}
 
-                {/* Scrollable folder list */}
-                <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 py-2">
-                    {([
-                        ['recents', Clock3, t('common.recents')],
-                        ['favorites', Star, t('common.favorites')],
-                        ['offline', Database, t('common.offline_files')],
-                    ] as const).map(([view, Icon, label]) => (
+            {!collapsed && showGroupEditor && !settings.hideGroups && (
+                <div className="quiet-surface mx-3 mt-1.5 flex flex-col gap-2.5 p-2.5">
+                    <div>
+                        <label className="mb-1 block text-badge font-medium text-app-text-secondary">
+                            {editingGroup ? t('common.edit_group_name') : t('common.new_group_name')}
+                        </label>
+                        <input
+                            autoFocus
+                            type="text"
+                            className="quiet-control h-8 w-full border border-app-border bg-app-surface-sunken/50 px-2 text-ui text-app-text outline-none"
+                            placeholder={t('common.enter_group_name')}
+                            value={groupName}
+                            onChange={e => setGroupName(e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block text-badge font-medium text-app-text-secondary">
+                            {t('common.theme_color')}
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                            {PRESET_COLORS.map(color => (
+                                <button
+                                    key={color}
+                                    type="button"
+                                    aria-label={color}
+                                    onClick={() => setGroupColor(color)}
+                                    className={`h-5 w-5 rounded-full border transition-transform ${
+                                        groupColor === color
+                                            ? 'scale-110 border-app-accent'
+                                            : 'border-transparent hover:scale-105'
+                                    }`}
+                                    style={{ backgroundColor: color }}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="mt-1 flex justify-end gap-2">
+                        {editingGroup && (
+                            <button
+                                type="button"
+                                onClick={() => handleDeleteGroupClick(editingGroup.id)}
+                                className="mr-auto rounded p-1.5 text-app-danger transition-colors hover:bg-app-danger/10"
+                                aria-label={t('common.delete_group')}
+                                title={t('common.delete_group')}
+                            >
+                                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                            </button>
+                        )}
                         <button
-                            key={view}
                             type="button"
-                            onClick={() => onSmartViewChange?.(view)}
-                            title={label}
-                            aria-current={activeSmartView === view ? 'page' : undefined}
-                            className={`quiet-control flex h-8 w-full items-center ${settings.sidebarCollapsed ? 'justify-center' : 'gap-2 px-2.5'} text-ui font-medium ${activeSmartView === view ? 'bg-app-selected text-app-accent' : 'text-app-text-secondary hover:text-app-text'}`}
+                            onClick={() => {
+                                setShowGroupEditor(false);
+                                setEditingGroup(null);
+                            }}
+                            className="quiet-control flex h-7 items-center gap-1 px-2 text-badge font-medium text-app-text-secondary hover:text-app-text"
                         >
-                            <Icon className="h-4 w-4 shrink-0" />
-                            {!settings.sidebarCollapsed && <span>{label}</span>}
+                            <X className="h-3 w-3" aria-hidden="true" />
+                            {t('common.cancel') || 'Cancel'}
                         </button>
-                    ))}
-                    {!settings.sidebarCollapsed && <div className="my-2 h-px bg-app-border-subtle" />}
-                    {([
-                        ['all', Files, t('common.all_files')],
-                        ['photos', Image, t('common.photos')],
-                        ['videos', Film, t('common.videos')],
-                        ['documents', FileText, t('common.documents')],
-                    ] as const).map(([view, Icon, label]) => (
                         <button
-                            key={view}
                             type="button"
-                            onClick={() => onSmartViewChange?.(view)}
-                            title={label}
-                            aria-current={activeSmartView === view ? 'page' : undefined}
-                            className={`quiet-control flex h-8 w-full items-center ${settings.sidebarCollapsed ? 'justify-center' : 'gap-2 px-2.5'} text-ui font-medium ${activeSmartView === view ? 'bg-app-selected text-app-accent' : 'text-app-text-secondary hover:text-app-text'}`}
+                            onClick={handleSaveGroup}
+                            disabled={!groupName.trim()}
+                            className="quiet-control flex h-7 items-center gap-1 bg-app-accent px-2.5 text-badge font-medium text-app-accent-contrast hover:bg-app-accent-hover disabled:opacity-50"
                         >
-                            <Icon className="h-4 w-4 shrink-0" />
-                            {!settings.sidebarCollapsed && <span>{label}</span>}
+                            <Check className="h-3 w-3" aria-hidden="true" />
+                            {t('common.save') || 'Save'}
                         </button>
-                    ))}
-                    {!settings.sidebarCollapsed && <p className="px-2.5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-app-text-tertiary">{t('common.storage_insights')}</p>}
-                    {([
-                        ['large', FileWarning, t('common.large_files')],
-                        ['duplicates', Copy, t('common.duplicates')],
-                    ] as const).map(([view, Icon, label]) => (
-                        <button
-                            key={view}
-                            type="button"
-                            onClick={() => onSmartViewChange?.(view)}
-                            title={label}
-                            aria-current={activeSmartView === view ? 'page' : undefined}
-                            className={`quiet-control flex h-8 w-full items-center ${settings.sidebarCollapsed ? 'justify-center' : 'gap-2 px-2.5'} text-ui font-medium ${activeSmartView === view ? 'bg-app-selected text-app-accent' : 'text-app-text-secondary hover:text-app-text'}`}
-                        >
-                            <Icon className="h-4 w-4 shrink-0" />
-                            {!settings.sidebarCollapsed && <span>{label}</span>}
-                        </button>
-                    ))}
-                    {!settings.sidebarCollapsed && <div className="my-2 h-px bg-app-border-subtle" />}
-                    <SidebarItem
-                        icon={HardDrive}
-                        label={t('common.saved_messages')}
-                        active={activeFolderId === null && !activeSmartView}
-                        onClick={() => { onSmartViewChange?.(null); setActiveFolderId(null); }}
-                        folderId={null}
-                        collapsed={settings.sidebarCollapsed}
+                    </div>
+                </div>
+            )}
+
+            {!collapsed && !settings.hideGroups && (
+                <div
+                    className="group-tabs-scroll flex items-center gap-1.5 overflow-x-auto px-3.5 pb-2 pt-1.5"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                    <style>{`
+                        .group-tabs-scroll::-webkit-scrollbar {
+                            display: none;
+                        }
+                    `}</style>
+                    <GroupTab
+                        id="group-tab-all"
+                        groupId="all"
+                        label={t('common.all') || 'All'}
+                        active={activeGroupId === 'all'}
+                        onClick={() => setActiveGroupId('all')}
+                        isSortable={false}
+                    />
+                    <GroupTab
+                        id="group-tab-unassigned"
+                        groupId={null}
+                        label={t('common.unassigned') || 'Unassigned'}
+                        active={activeGroupId === null}
+                        onClick={() => setActiveGroupId(null)}
+                        isSortable={false}
                     />
                     <SortableContext
-                        items={filteredFolders.map(folder => `folder-${folder.id}`)}
-                        strategy={verticalListSortingStrategy}
+                        items={groups.map(g => `group-tab-${g.id}`)}
+                        strategy={horizontalListSortingStrategy}
                     >
-                        {filteredFolders.map(folder => (
-                            <SidebarItem
-                                key={folder.id}
-                                icon={Folder}
-                                label={folder.name}
-                                active={activeFolderId === folder.id && !activeSmartView}
-                                onClick={() => { onSmartViewChange?.(null); setActiveFolderId(folder.id); }}
-                                onDelete={() => onDelete(folder.id, folder.name)}
-                                onRename={() => onRename(folder.id, folder.name)}
-                                onToggleVisibility={() => onToggleVisibility(folder.id, folder.name, !!(folder.is_public || folder.username))}
-                                onExportInvite={() => onExportInvite(folder.id, folder.name)}
-                                folderId={folder.id}
-                                isPublic={!!(folder.is_public || folder.username)}
-                                collapsed={settings.sidebarCollapsed}
-                                groups={groups}
-                                onAssignFolderToGroup={onAssignFolderToGroup}
+                        {groups.map(group => (
+                            <GroupTab
+                                key={group.id}
+                                id={`group-tab-${group.id}`}
+                                groupId={group.id}
+                                label={group.name}
+                                colorHex={group.color_hex}
+                                active={activeGroupId === group.id}
+                                onClick={() => setActiveGroupId(group.id)}
+                                onEdit={() => {
+                                    setEditingGroup(group);
+                                    setGroupName(group.name);
+                                    setGroupColor(group.color_hex || '#3B82F6');
+                                    setShowGroupEditor(true);
+                                }}
                             />
                         ))}
                     </SortableContext>
-                </nav>
-            {/* Sticky Create Folder section — always visible above the footer */}
-            {!settings.sidebarCollapsed && (
-                <div className="border-t border-app-border-subtle px-2 py-2">
+                </div>
+            )}
+
+            {/* Navigation */}
+            <div className={collapsed ? 'drive-sidebar-scroll items-center px-1.5' : 'drive-sidebar-scroll'}>
+                {([
+                    ['recents', Clock3, t('common.recents')],
+                    ['favorites', Star, t('common.favorites')],
+                    ['offline', Database, t('common.offline_files')],
+                ] as const).map(([view, Icon, label]) => (
                     <button
-                        onClick={() => setShowNewFolderInput(true)}
-                        className="quiet-control flex h-9 w-full items-center gap-2 border border-dashed border-app-border px-3 text-ui font-medium text-app-text-secondary hover:border-app-border-strong hover:text-app-text"
+                        key={view}
+                        type="button"
+                        onClick={() => onSmartViewChange?.(view)}
+                        title={label}
+                        aria-current={activeSmartView === view ? 'page' : undefined}
+                        data-active={activeSmartView === view}
+                        className={`drive-nav-row ${collapsed ? 'justify-center px-0' : ''}`}
                     >
-                        <Plus className="w-4 h-4" />
+                        <Icon className="drive-nav-icon h-4 w-4 shrink-0" aria-hidden="true" />
+                        {!collapsed && <span className="truncate">{label}</span>}
+                    </button>
+                ))}
+
+                {!collapsed && <div className="drive-divider" />}
+
+                {([
+                    ['all', Files, t('common.all_files')],
+                    ['photos', Image, t('common.photos')],
+                    ['videos', Film, t('common.videos')],
+                    ['documents', FileText, t('common.documents')],
+                ] as const).map(([view, Icon, label]) => (
+                    <button
+                        key={view}
+                        type="button"
+                        onClick={() => onSmartViewChange?.(view)}
+                        title={label}
+                        aria-current={activeSmartView === view ? 'page' : undefined}
+                        data-active={activeSmartView === view}
+                        className={`drive-nav-row ${collapsed ? 'justify-center px-0' : ''}`}
+                    >
+                        <Icon className="drive-nav-icon h-4 w-4 shrink-0" aria-hidden="true" />
+                        {!collapsed && <span className="truncate">{label}</span>}
+                    </button>
+                ))}
+
+                {!collapsed && (
+                    <p className="drive-nav-label">{t('common.storage_insights')}</p>
+                )}
+
+                {([
+                    ['large', FileWarning, t('common.large_files')],
+                    ['duplicates', Copy, t('common.duplicates')],
+                ] as const).map(([view, Icon, label]) => (
+                    <button
+                        key={view}
+                        type="button"
+                        onClick={() => onSmartViewChange?.(view)}
+                        title={label}
+                        aria-current={activeSmartView === view ? 'page' : undefined}
+                        data-active={activeSmartView === view}
+                        className={`drive-nav-row ${collapsed ? 'justify-center px-0' : ''}`}
+                    >
+                        <Icon className="drive-nav-icon h-4 w-4 shrink-0" aria-hidden="true" />
+                        {!collapsed && <span className="truncate">{label}</span>}
+                    </button>
+                ))}
+
+                {!collapsed && <div className="drive-divider" />}
+                {!collapsed && <p className="drive-nav-label">{t('common.folders')}</p>}
+
+                <SidebarItem
+                    icon={HardDrive}
+                    label={t('common.saved_messages')}
+                    active={activeFolderId === null && !activeSmartView}
+                    onClick={() => { onSmartViewChange?.(null); setActiveFolderId(null); }}
+                    folderId={null}
+                    collapsed={collapsed}
+                />
+                <SortableContext
+                    items={filteredFolders.map(folder => `folder-${folder.id}`)}
+                    strategy={verticalListSortingStrategy}
+                >
+                    {filteredFolders.map(folder => (
+                        <SidebarItem
+                            key={folder.id}
+                            icon={Folder}
+                            label={folder.name}
+                            active={activeFolderId === folder.id && !activeSmartView}
+                            onClick={() => { onSmartViewChange?.(null); setActiveFolderId(folder.id); }}
+                            onDelete={() => onDelete(folder.id, folder.name)}
+                            onRename={() => onRename(folder.id, folder.name)}
+                            onToggleVisibility={() => onToggleVisibility(folder.id, folder.name, !!(folder.is_public || folder.username))}
+                            onExportInvite={() => onExportInvite(folder.id, folder.name)}
+                            folderId={folder.id}
+                            isPublic={!!(folder.is_public || folder.username)}
+                            collapsed={collapsed}
+                            groups={groups}
+                            onAssignFolderToGroup={onAssignFolderToGroup}
+                        />
+                    ))}
+                </SortableContext>
+            </div>
+
+            {/* Create folder stays one click away, above the footer */}
+            {!collapsed && (
+                <div className="drive-sidebar-utility">
+                    <button
+                        type="button"
+                        onClick={() => setShowNewFolderInput(true)}
+                        className="drive-new-folder"
+                    >
+                        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                         {t('common.create_folder')}
                     </button>
                 </div>
@@ -446,53 +528,63 @@ export function Sidebar({
                 <CreateFolderDialog onClose={() => setShowNewFolderInput(false)} onCreate={onCreate} />
             )}
 
-            <div className={`flex flex-col border-t border-app-border-subtle p-2 ${settings.sidebarCollapsed ? 'items-center gap-2' : 'gap-2'}`}>
-                <SyncStatusBadge collapsed={settings.sidebarCollapsed} />
-                {settings.sidebarCollapsed ? (
+            <div className={collapsed ? 'flex flex-col items-center gap-2 border-t border-app-border-subtle py-3' : 'drive-sidebar-footer'}>
+                {collapsed ? (
                     <>
-                        <div
+                        <span
                             className={`h-2 w-2 flex-shrink-0 rounded-full ${isConnected ? 'bg-app-success' : 'bg-app-danger'}`}
                             title={isConnected ? t('common.connected_telegram') : t('common.disconnected_telegram')}
                         />
                         <button
+                            type="button"
                             onClick={onSync}
                             disabled={isSyncing}
-                            className={`quiet-control sidebar-sync-action p-2 text-app-accent ${isSyncing ? 'cursor-not-allowed opacity-50' : ''}`}
+                            className="drive-icon-circle"
+                            aria-label={isSyncing ? t('common.syncing') : t('common.sync')}
                             title={isSyncing ? t('common.syncing') : t('common.sync')}
                         >
-                            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} aria-hidden="true" />
                         </button>
                         <button
+                            type="button"
                             onClick={onLogout}
-                            className="quiet-control sidebar-logout-action p-2 text-app-danger"
+                            className="drive-icon-circle"
+                            aria-label={t('common.logout')}
                             title={t('common.logout')}
                         >
-                            <LogOut className="w-4 h-4" />
+                            <LogOut className="h-4 w-4" aria-hidden="true" />
                         </button>
                     </>
                 ) : (
                     <>
-                        <div className="flex items-center gap-2 text-metadata text-app-text-secondary">
-                            <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-app-success' : 'bg-app-danger'}`}></div>
-                            <span>{isConnected ? t('common.connected_telegram') : t('common.disconnected_telegram')}</span>
+                        <SyncStatusBadge collapsed={false} />
+
+                        <div className="drive-status">
+                            <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-app-success' : 'bg-app-danger'}`} aria-hidden="true" />
+                            <span className="truncate">
+                                {isConnected ? t('common.connected_telegram') : t('common.disconnected_telegram')}
+                            </span>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="drive-footer-actions">
                             <button
+                                type="button"
                                 onClick={onSync}
                                 disabled={isSyncing}
-                                className={`quiet-control sidebar-sync-action flex h-[30px] flex-1 items-center justify-center gap-1.5 px-2.5 text-badge font-medium text-app-accent ${isSyncing ? 'cursor-not-allowed opacity-50' : ''}`}
-                                title="Scan for existing folders"
+                                className="drive-footer-btn"
+                                title={t('common.sync')}
                             >
-                                <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                                <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} aria-hidden="true" />
                                 {isSyncing ? t('common.syncing') : t('common.sync')}
                             </button>
                             <button
+                                type="button"
                                 onClick={onLogout}
-                                className="quiet-control sidebar-logout-action flex h-[30px] flex-1 items-center justify-center gap-1.5 px-2.5 text-badge font-medium text-app-danger"
-                                title="Sign Out"
+                                className="drive-footer-btn"
+                                data-tone="danger"
+                                title={t('common.logout')}
                             >
-                                <LogOut className="w-3 h-3" />
+                                <LogOut className="h-3 w-3" aria-hidden="true" />
                                 {t('common.logout')}
                             </button>
                         </div>

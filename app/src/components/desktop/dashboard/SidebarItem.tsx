@@ -76,12 +76,9 @@ export function SidebarItem({
             onClick={onClick}
             title={collapsed ? label : undefined}
             onContextMenu={openFromContextMenu}
-            className={`quiet-control group flex h-8 w-full cursor-pointer select-none items-center text-ui ${collapsed ? 'justify-center px-0' : 'gap-2.5 px-2.5'} ${active
-                ? 'bg-app-selected font-medium text-app-text'
-                : isFileDragOver
-                    ? 'bg-app-selected text-app-text ring-2 ring-app-accent'
-                    : 'text-app-text-secondary hover:text-app-text'
-                }`}
+            className={`drive-nav-row group cursor-pointer select-none ${collapsed ? 'justify-center px-0' : ''}`}
+            data-active={active || isFileDragOver}
+            data-drop={isFileDragOver ? 'true' : undefined}
         >
             <Icon className={`h-4 w-4 flex-shrink-0 ${active || isFileDragOver ? 'text-app-accent' : ''}`} />
             {!collapsed && <span className="flex-1 truncate text-start">{label}</span>}

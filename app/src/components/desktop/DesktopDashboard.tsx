@@ -25,6 +25,7 @@ import { formatBytes, isMediaFile, isPdfFile, isArchiveFile, isImageFile, copyTo
 
 // Components
 import { Sidebar } from './dashboard/Sidebar';
+import { DriveFrame } from './dashboard/DriveFrame';
 import { TopBar } from './dashboard/TopBar';
 import { FileExplorer, type SortDirection, type SortField } from './dashboard/FileExplorer';
 import { TransferCenter } from './dashboard/TransferCenter';
@@ -727,7 +728,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             onDragCancel={() => setInternalDrag(null)}
             onDragEnd={handleInternalDragEnd}
         >
-            <div className="desktop-shell relative flex h-screen w-full overflow-hidden bg-app-canvas">
+            <div className="desktop-shell drive-shell h-screen w-full">
                 <SyncDashboard />
 
             <ExternalDropBlocker
@@ -794,47 +795,49 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                 )}
             </AnimatePresence>
 
-            <Sidebar
-                folders={folders}
-                groups={groups}
-                activeFolderId={activeFolderId}
-                setActiveFolderId={setActiveFolderId}
-                onDelete={handleFolderDelete}
-                onRename={(id, name) => setRenameFolder({ id, name })}
-                onToggleVisibility={async (id, _name, isPublic) => {
-                    try {
-                        await handleFolderToggleVisibility(id, !isPublic);
-                        queryClient.invalidateQueries({ queryKey: ['folders'] });
-                    } catch { /* toast handled in hook */ }
-                }}
-                onExportInvite={async (id, _name) => {
-                    try {
-                        const info = await handleExportFolderInvite(id);
+            <DriveFrame sidebar={
+                <Sidebar
+                    folders={folders}
+                    groups={groups}
+                    activeFolderId={activeFolderId}
+                    setActiveFolderId={setActiveFolderId}
+                    onDelete={handleFolderDelete}
+                    onRename={(id, name) => setRenameFolder({ id, name })}
+                    onToggleVisibility={async (id, _name, isPublic) => {
                         try {
-                            await copyToClipboard(info.link);
-                            toast.success(`Invite link copied: ${info.link}`);
-                        } catch (e) {
-                            toast.error(`Failed to copy to clipboard: ${e}`);
-                        }
-                    } catch { /* backend error already toasted in hook */ }
-                }}
-                onCreate={handleCreateFolder}
-                isSyncing={isSyncing}
-                isConnected={isConnected}
-                onSync={() => void handleManualSync()}
-                onLogout={handleLogout}
-                bandwidth={bandwidth || null}
-                onAssignFolderToGroup={handleAssignFolderToGroup}
-                onCreateGroup={handleCreateGroup}
-                onUpdateGroup={handleUpdateGroup}
-                onDeleteGroup={handleDeleteGroup}
-                createFolderRequest={createFolderRequest}
-                activeSmartView={activeSmartView}
-                onSmartViewChange={setActiveSmartView}
-            />
+                            await handleFolderToggleVisibility(id, !isPublic);
+                            queryClient.invalidateQueries({ queryKey: ['folders'] });
+                        } catch { /* toast handled in hook */ }
+                    }}
+                    onExportInvite={async (id, _name) => {
+                        try {
+                            const info = await handleExportFolderInvite(id);
+                            try {
+                                await copyToClipboard(info.link);
+                                toast.success(`Invite link copied: ${info.link}`);
+                            } catch (e) {
+                                toast.error(`Failed to copy to clipboard: ${e}`);
+                            }
+                        } catch { /* backend error already toasted in hook */ }
+                    }}
+                    onCreate={handleCreateFolder}
+                    isSyncing={isSyncing}
+                    isConnected={isConnected}
+                    onSync={() => void handleManualSync()}
+                    onLogout={handleLogout}
+                    bandwidth={bandwidth || null}
+                    onAssignFolderToGroup={handleAssignFolderToGroup}
+                    onCreateGroup={handleCreateGroup}
+                    onUpdateGroup={handleUpdateGroup}
+                    onDeleteGroup={handleDeleteGroup}
+                    createFolderRequest={createFolderRequest}
+                    activeSmartView={activeSmartView}
+                    onSmartViewChange={setActiveSmartView}
+                    onUpload={handleManualUpload}
+                />
+            }
+            >
 
-            <main className="flex min-w-0 flex-1 flex-col">
-                <div className="desktop-chrome-row justify-end"><button type="button" onClick={() => setWorkspaceKeys([])} className="quiet-control flex h-8 items-center gap-2 px-3 text-ui font-medium text-app-accent hover:bg-app-hover"><Files className="h-4 w-4" />{t('workspace.title')}</button></div>
                 <TopBar
                     currentFolderName={currentViewName}
                     selectedIds={selectedIds}
@@ -861,9 +864,10 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                     onNewFolderClick={() => setCreateFolderRequest((value) => value + 1)}
                     onShowShortcuts={() => setShowShortcuts(true)}
                     onShowHelp={() => setShowHelp(true)}
+                    onOpenLibrary={() => setWorkspaceKeys([])}
                 />
                 {(searchTerm.trim().length > 0 || searchFilters.type !== 'all' || searchFilters.size !== 'any' || searchFilters.date !== 'any') && (
-                    <div className="px-3 pb-0 pt-3">
+                    <div className="px-[1.375rem] pb-0 pt-4">
                         <h2 className="text-ui font-medium text-app-text-secondary">
                             {displayedFiles.length.toLocaleString()} result{displayedFiles.length === 1 ? '' : 's'}{searchTerm.trim() ? <> for <span className="text-app-accent">"{searchTerm}"</span></> : null}
                         </h2>
@@ -898,7 +902,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                     syncProgress={folderSyncProgress}
                     selectionDisabled={isCrossFolderView}
                 />
-            </main>
+            </DriveFrame>
 
             {workspaceKeys !== null && <LazyFeatureBoundary><LazyWorkspaceHub folders={folders} initialKeys={workspaceKeys} onClose={() => setWorkspaceKeys(null)} onOpen={(file, orderedFiles, localPath) => handlePreview(file, orderedFiles, localPath)} onFolder={id => { setWorkspaceKeys(null); setActiveSmartView(null); setActiveFolderId(id); }} /></LazyFeatureBoundary>}
 
