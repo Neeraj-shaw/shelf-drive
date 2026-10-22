@@ -1,3 +1,21 @@
+## [4.5.0] - 2026-10-22
+
+### Interface
+
+- Redesigned the desktop shell as a floating window on a tinted canvas, with a sidebar rail carrying the brand tile, an upload pill, circular quick actions and pill navigation.
+- Replaced the split toolbar with a single header holding the folder title, inline search, filter, Create Folder and Upload pills, the view toggle and an overflow menu; sorting now sits on its own row.
+- Rebuilt file cards around large artwork tiles with type-tinted backdrops and the name, size and actions underneath, adding a hover quick-action pill and an always-visible overflow menu per tile.
+- Restyled the list view with a column header and taller rows, and turned the upload drop zones into dashed tiles that match the grid.
+- Added a collapsible 64 px icon rail that keeps search, settings, sync and log out reachable.
+
+### Theming
+
+- Derived every new surface from the existing theme tokens, so custom themes and the built-in presets still apply, with explicit light and dark reference values.
+- Kept the shared design tokens, radii and control primitives untouched, so the visual regression gallery is unchanged.
+
+### Reliability
+
+- Bumped the total CSS bundle budget from 140 kB to 160 kB to cover the new shell theme layer.
 ## [4.0.1] - 2026-10-05
 
 ### Interface
